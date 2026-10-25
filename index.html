@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="ne">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Siena Beauty Parlour & Cosmetics - AI Skin Scanner</title>
+    <style>
+        body { 
+            font-family: 'Kalimati', 'Kokila', Arial, sans-serif; 
+            text-align: center; 
+            background-color: #fce4ec; 
+            margin: 0; 
+            padding: 20px; 
+        }
+        h1 { color: #d81b60; margin-bottom: 5px; font-size: 26px; }
+        h3 { color: #880e4f; margin-top: 0; font-size: 18px; margin-bottom: 20px;}
+        
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            max-width: 360px;
+            margin: 0 auto;
+            border-top: 5px solid #d81b60;
+        }
+        
+        .form-group { margin-bottom: 15px; text-align: left; }
+        .form-group label { font-weight: bold; color: #333; font-size: 16px; display: block; margin-bottom: 8px; }
+        .form-group select { 
+            width: 100%; padding: 12px; font-size: 16px; 
+            border: 1px solid #ddd; border-radius: 8px; background-color: #fff8fa; outline: none;
+        }
+
+        .btn-group { display: flex; flex-direction: column; gap: 12px; margin-top: 20px; }
+        .row-btn-group { display: flex; gap: 10px; margin-top: 15px; }
+        
+        button { 
+            color: white; padding: 14px 15px; font-size: 18px; 
+            border: none; border-radius: 8px; cursor: pointer; font-weight: bold;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 100%; transition: 0.3s;
+        }
+        .primary-btn { background-color: #d81b60; }
+        .primary-btn:hover { background-color: #ad1457; }
+        .secondary-btn { background-color: #00796b; }
+        .action-btn { background-color: #2e7d32; font-size: 20px; }
+        .info-btn { background-color: #1565c0; flex: 1; font-size: 16px; padding: 10px;}
+        .warning-btn { background-color: #f57c00; margin-top: 15px; }
+        
+        #video-container, #preview-container { 
+            margin: 15px auto; border: 4px solid #d81b60; border-radius: 10px; 
+            overflow: hidden; background-color: #000; display: none; position: relative;
+        }
+        video, img#captured-image { width: 100%; display: block; }
+        
+        /* ऐना जस्तो देखाउन */
+        .mirror { transform: scaleX(-1); }
+
+        #loading-ui { display: none; padding: 20px 0; }
+        .loader {
+            border: 6px solid #f3f3f3; border-top: 6px solid #d81b60;
+            border-radius: 50%; width: 50px; height: 50px;
+            animation: spin 1s linear infinite; margin: 0 auto 15px;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        .result-title { font-size: 22px; font-weight: bold; color: #333; margin: 15px 0; }
+        .customer-info { background: #fff8fa; padding: 12px; border-radius: 8px; margin-bottom: 15px; border: 1px dashed #d81b60; text-align: left; font-size: 15px;}
+        
+        #dynamic-details { 
+            margin-top: 15px; font-size: 16px; color: #333; line-height: 1.5;
+            background: #f9f9f9; padding: 15px; border-radius: 8px; 
+            display: none; border-left: 5px solid #d81b60; text-align: left;
+        }
+        .label { color: #d81b60; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <h1>सिएना ब्युटी पार्लर एण्ड कस्मेटिक्स</h1>
+    <h3>AI Skin Scanner (Powered by Smart Tech)</h3>
+    
+    <div class="card" id="main-ui">
+        <div id="step-1-form">
+            <div class="form-group">
+                <label>लिङ्ग छान्नुहोस्:</label>
+                <select id="gender"><option>महिला (Female)</option><option>पुरुष (Male)</option></select>
+            </div>
+            <div class="form-group">
+                <label>उमेर समूह:</label>
+                <select id="age">
+                    <option>२० वर्षभन्दा कम</option>
+                    <option>२० देखि ३० वर्ष</option>
+                    <option>३१ देखि ४० वर्ष</option>
+                    <option>४० वर्षभन्दा माथि</option>
+                </select>
+            </div>
+            <div class="btn-group">
+                <button class="primary-btn" onclick="showCameraOptions()">क्यामेराबाट स्क्यान गर्नुहोस्</button>
+                <button class="secondary-btn" onclick="document.getElementById('image-upload').click()">ग्यालरीबाट फोटो छान्नुहोस्</button>
+                <input type="file" id="image-upload" accept="image/*" style="display: none;" onchange="handleUpload(event)">
+            </div>
+        </div>
+
+        <div id="camera-choice-ui" style="display: none;">
+            <h4 style="color:#d81b60; margin-top:0;">कुन क्यामेरा खोल्ने?</h4>
+            <div class="btn-group">
+                <button class="primary-btn" onclick="startCamera('environment')">पछाडिको क्यामेरा (Back)</button>
+                <button class="primary-btn" onclick="startCamera('user')">अगाडिको क्यामेरा (Front)</button>
+                <button class="warning-btn" onclick="resetApp()">पछाडि जानुहोस्</button>
+            </div>
+        </div>
+
+        <div id="video-container">
+            <video id="webcam-video" autoplay playsinline></video>
+        </div>
+        <button id="capture-btn" class="action-btn" style="display: none; margin-top: 15px;" onclick="capturePhoto()">फोटो खिच्नुहोस्</button>
+
+        <div id="preview-container">
+            <img id="captured-image" src="" alt="Preview">
+        </div>
+        <div id="submit-group" style="display: none; margin-top: 15px;">
+            <button class="action-btn" onclick="submitToAI()">विश्लेषण गर्नुहोस् (Analyze)</button>
+            <button class="warning-btn" onclick="resetApp()">रद्द गर्नुहोस्</button>
+        </div>
+
+        <div id="loading-ui">
+            <div class="loader"></div>
+            <h3 style="color: #d81b60;">तपाईंको छालाको विश्लेषण हुँदैछ...<br><span style="font-size: 14px; color: #666;">(कृपया केही सेकेन्ड पर्खनुहोस्)</span></h3>
+        </div>
+
+        <div id="result-ui" style="display: none;">
+            <div id="customer-data" class="customer-info"></div>
+            <div id="result-title" class="result-title"></div>
+            
+            <div class="row-btn-group">
+                <button class="info-btn" onclick="showDetail('cause')">कारण हेर्नुहोस्</button>
+                <button class="info-btn" style="background-color: #00838f;" onclick="showDetail('recommendation')">सिफारिस हेर्नुहोस्</button>
+            </div>
+            
+            <div id="dynamic-details"></div>
+            <button class="warning-btn" onclick="resetApp()">फेरि स्क्यान गर्नुहोस्</button>
+        </div>
+    </div>
+
+    <script>
+        // तपाईंले बनाएको नयाँ गुगल स्क्रिप्टको लिंक
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyTOgyLOi4Agr_FDUD03liwfJYbwxqVWuIj7Oqtj7IDA5hrxwpMEOzYy1dZOXO7b3NCdA/exec";
+        
+        let videoStream = null;
+        let base64Image = "";
+        let currentAiData = null;
+
+        function showCameraOptions() {
+            document.getElementById('step-1-form').style.display = 'none';
+            document.getElementById('camera-choice-ui').style.display = 'block';
+        }
+
+        async function startCamera(facingMode) {
+            document.getElementById('camera-choice-ui').style.display = 'none';
+            const video = document.getElementById('webcam-video');
+            
+            if (facingMode === 'user') {
+                video.classList.add('mirror');
+            } else {
+                video.classList.remove('mirror');
+            }
+
+            try {
+                videoStream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: facingMode, width: { ideal: 720 } } 
+                });
+                video.srcObject = videoStream;
+                document.getElementById('video-container').style.display = 'block';
+                document.getElementById('capture-btn').style.display = 'block';
+            } catch (err) {
+                alert("क्यामेरा खोल्न सकिएन। कृपया सेटिङमा गएर क्यामेराको अनुमति (Permission) दिनुहोस्।");
+                resetApp();
+            }
+        }
+
+        function capturePhoto() {
+            const video = document.getElementById('webcam-video');
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            
+            // ऐना जस्तो छ भने उल्ट्याएर खिच्ने
+            if(video.classList.contains('mirror')) {
+                ctx.translate(canvas.width, 0);
+                ctx.scale(-1, 1);
+            }
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            base64Image = canvas.toDataURL('image/jpeg', 0.8);
+            stopCamera();
+            
+            document.getElementById('video-container').style.display = 'none';
+            document.getElementById('capture-btn').style.display = 'none';
+            
+            showPreview();
+        }
+
+        function handleUpload(event) {
+            const file = event.target.files[0];
+            if(!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                base64Image = e.target.result;
+                document.getElementById('step-1-form').style.display = 'none';
+                showPreview();
+            }
+            reader.readAsDataURL(file);
+        }
+
+        function showPreview() {
+            document.getElementById('captured-image').src = base64Image;
+            document.getElementById('preview-container').style.display = 'block';
+            document.getElementById('submit-group').style.display = 'block';
+        }
+
+        function stopCamera() {
+            if (videoStream) {
+                videoStream.getTracks().forEach(track => track.stop());
+                videoStream = null;
+            }
+        }
+
+        async function submitToAI() {
+            document.getElementById('preview-container').style.display = 'none';
+            document.getElementById('submit-group').style.display = 'none';
+            document.getElementById('loading-ui').style.display = 'block';
+
+            try {
+                const response = await fetch(SCRIPT_URL, {
+                    method: "POST",
+                    body: JSON.stringify({ image: base64Image })
+                });
+                
+                let rawText = await response.text();
+                // कहिलेकाहीँ AI ले ```json ... ``` थपेर पठाउँछ, त्यसलाई हटाएको
+                rawText = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
+                
+                const data = JSON.parse(rawText);
+                currentAiData = data;
+                
+                showResults(data);
+
+            } catch (error) {
+                alert("इन्टरनेट वा सर्भरमा समस्या आयो। कृपया फेरि प्रयास गर्नुहोस्।");
+                resetApp();
+            }
+        }
+
+        function showResults(data) {
+            document.getElementById('loading-ui').style.display = 'none';
+            document.getElementById('result-ui').style.display = 'block';
+            
+            const gender = document.getElementById('gender').value;
+            const age = document.getElementById('age').value;
+            
+            document.getElementById('customer-data').innerHTML = `<span class='label'>ग्राहक:</span> ${gender}, उमेर: ${age}`;
+            document.getElementById('result-title').innerHTML = `नतिजा: <span style="color:#d81b60;">${data.skin_type || 'Unknown'}</span>`;
+            document.getElementById('dynamic-details').style.display = "none";
+        }
+
+        function showDetail(type) {
+            const detailsBox = document.getElementById("dynamic-details");
+            if(!currentAiData) return;
+            
+            if(type === 'cause') {
+                detailsBox.innerHTML = `<span class='label'>मुख्य कारण:</span><br><br>${currentAiData.cause || 'विवरण उपलब्ध छैन।'}`;
+            } else if(type === 'recommendation') {
+                detailsBox.innerHTML = `<span class='label'>सिएना पार्लरको सिफारिस:</span><br><br>${currentAiData.recommendation || 'विवरण उपलब्ध छैन।'}`;
+            }
+            detailsBox.style.display = "block";
+        }
+
+        function resetApp() {
+            stopCamera();
+            base64Image = "";
+            currentAiData = null;
+            
+            document.getElementById('camera-choice-ui').style.display = 'none';
+            document.getElementById('video-container').style.display = 'none';
+            document.getElementById('capture-btn').style.display = 'none';
+            document.getElementById('preview-container').style.display = 'none';
+            document.getElementById('submit-group').style.display = 'none';
+            document.getElementById('loading-ui').style.display = 'none';
+            document.getElementById('result-ui').style.display = 'none';
+            document.getElementById('dynamic-details').style.display = 'none';
+            
+            document.getElementById('step-1-form').style.display = 'block';
+            document.getElementById('image-upload').value = ""; 
+        }
+    </script>
+</body>
+</html>
